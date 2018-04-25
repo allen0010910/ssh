@@ -7,19 +7,173 @@ comments: false
 
 <br/>
 
-**SSH框架实现分页查询案例**
+**SSH框架整合、分页查询案例**
 
-之前已经写过了SSM框架的分页查询案例，刚翻笔记时找到了以前写过的SSH分页查询的功能的笔记，这里就也再整理一下喽，送给那些在学习SSH框架的同学，SSH框架因为用的Hibernate，所以与SSM有所不同，希望这个案例能对大家有所帮助。
+之前已经写过了SSM框架的分页查询案例，刚翻笔记时看到了以前写过的SSH分页查询的功能的笔记，这里就也再整理一下喽，送给那些在学习SSH框架的同学，SSH框架因为用的Hibernate，所以与SSM有所不同，希望这个小案例能对大家有所帮助。
+
 
 
 <!--more-->
 
-### 创建数据库，表由Hibernate自动生成：
+**关于项目**
+
+```
+框架：
+	后端：spring + struts2 + hibernate5.x
+	前端：bootstrap + Fontawesome图标集
+环境：IDEA + maven + mysql5.7 + Tomcat8
+index：localhost:8080/SSH_Paging/
+```
+
+本项目GitHub地址：[TyCoding-->SSH-Paging](https://github.com/TyCoding/SSH-Paging)
+
+---
+
+**我们先看一下项目目录结构**
+
+![](img/directory.png)
+
+**1. 首先这是maven项目，我们要要入依赖**
+
+```
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com</groupId>
+  <artifactId>customer</artifactId>
+  <packaging>war</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>customer Maven Webapp</name>
+  <url>http://maven.apache.org</url>
+  <build>
+    <finalName>customer</finalName>
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main/java</directory>
+        <includes>
+          <include>**/*.properties</include>
+          <include>**/*.xml</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+      </resource>
+    </resources>
+  </build>
+
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
+
+
+  <dependencies>
+    <!-- 单元测试 -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+    </dependency>
+
+    <!-- 1.日志 -->
+    <!-- 实现slf4j接口并整合 -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+
+    <!-- 2.数据库 -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>5.1.37</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>c3p0</groupId>
+      <artifactId>c3p0</artifactId>
+      <version>0.9.1.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>4.3.10.RELEASE</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.struts</groupId>
+      <artifactId>struts2-spring-plugin</artifactId>
+      <version>2.5.12</version>
+    </dependency>
+    <dependency>
+      <groupId>aspectj</groupId>
+      <artifactId>aspectjweaver</artifactId>
+      <version>1.5.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-orm</artifactId>
+      <version>4.3.10.RELEASE</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-core</artifactId>
+      <version>5.2.10.Final</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-c3p0</artifactId>
+      <version>5.2.10.Final</version>
+    </dependency>
+    <!-- 3.Servlet web -->
+    <dependency>
+      <groupId>jstl</groupId>
+      <artifactId>jstl</artifactId>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.5.4</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>3.1.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>net.sf.json-lib</groupId>
+      <artifactId>json-lib</artifactId>
+      <version>2.4</version>
+      <classifier>jdk15</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.struts</groupId>
+      <artifactId>struts2-json-plugin</artifactId>
+      <version>2.5.12</version>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>fastjson</artifactId>
+      <version>1.2.46</version>
+    </dependency>
+  </dependencies>
+</project>
+```
+
+**2. 创建数据库**
+
+注：由于使用hibernate，我们已配置表结构由hibernate自动生成，这里就不需要我们创建了
+
 ```
 create database ssh_paging character set utf8;
 
 # 插入数据
+# 以下代码需要在启动Tomcat运行项目后才能执行，不然还没有创建表结构，我们怎么插入数据呢。
 insert into Admin values(a,'admin','admin');
+
 insert into Customer values(1,'涂陌','123456789','你猜','不想写备注');
 insert into Customer values(2,'逗瓜','123456789','你猜','不想写备注');
 insert into Customer values(3,'愤青','123456789','你猜','不想写备注');
@@ -28,16 +182,16 @@ insert into Customer values(5,'小白','123456789','你猜','不想写备注');
 insert into Customer values(6,'菜鸡','123456789','你猜','不想写备注');
 ```
 
-### 1. JavaBean的封装
+**3. PageBean的封装**
 
 ```java
-package com.customer.pojo;
+package com.cutton.pojo;
 
 import java.io.Serializable;
 import java.util.List;
 
 /**
- * @author TyCoding
+ * @author huys
  * @date 18-3-10下午12:47
  */
 public class PageBean<T> implements Serializable {
@@ -111,11 +265,167 @@ public class PageBean<T> implements Serializable {
 }
 ```
 
-### 2. 前台js实现分页逻辑算法
+**4.1 action层 --> 处理前台模态框的编辑功能**
+
+```
+/**
+     * 为模态框提供的查询功能
+     * 处理ajax的请求
+     */
+    public String search() {
+        try {
+            HttpServletRequest request = ServletActionContext.getRequest();
+            HttpServletResponse response = ServletActionContext.getResponse();
+            request.setCharacterEncoding("UTF-8");
+            response.setContentType("text/html;charset=UTF-8");
+            customer = customerService.findById(customer.getC_id());
+
+            //将数据放到Map集合中，再转换成json格式的数据
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("c_id", customer.getC_id());
+            map.put("c_name", customer.getC_name());
+            map.put("c_telephone", customer.getC_telephone());
+            map.put("c_address", customer.getC_address());
+            map.put("c_remark", customer.getC_remark());
+
+            //将Map集合数据转换成json格式的数据
+            JSONObject json = JSONObject.fromObject(map);
+            result = json.toString();
+            System.out.println("这里我要传给前台页面的JSON数据是："+result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return SUCCESS;
+    }
+```
+
+​	**说明：**
+
+这里我们就要说一下了，首先我们要明白这个功能：其实就是普通的更新数据的功能，即当我们点击编辑按钮的时候需要先ajax异步请求去后台根据点击的字段id去查询对应的数据库信息，然后将数据以JSON的格式返回给页面，最后页面解析JSON格式数据，回显在编辑框中，实现编辑。
+
+那么，在这里是怎样进行将这个JSON格式数据返回给页面呢？我们需要看一下struts2.xml中配置：
+
+```
+<package name="struts2" namespace="/" extends="struts-default,json-default">
+<action name="customer_*" class="customerAction" method="{1}">
+	<result type="json">
+          <param name="root">result</param>
+     </result>
+     <allowed-methods>search</allowed-methods>
+</action>
+</package>
+	
+```
+
+1. 注意一下这个```<allowed-methods>```是为我们的通配符服务的，在struts2.3版本以后，如果我们没有写这个而直接使用通配符就会报错找不到映射，所以需要配置这个标签，格式：```<allowed-methods>方法名1，方法名2…</allowed-methods>```。详情请参考这篇 [博文](https://blog.csdn.net/qq_29663071/article/details/53009287)
+
+2. 注意```<result type="json">```在struts2中是用来做Ajax请求的，所以根本没有跳转页面，写这个标签，会将你Action中的变量转换成JSON格式数据返回到页面，
+  那么```<param name="root">result</param>```就会将你要返回的数据result（JSON字符串）返回给页面，在页面使用```var d = eval("("+data+")");``` 的方式将JSON字符串解析成JSON格式数据，然后我们就能通过ognl表达式解析获取数据，然后给指定的编辑框中赋值数据了。Ajax部分:
+
+  ```
+  // 先去查询数据
+  $.ajax({
+       url: '<%=basePath%>/customer_search.do?c_id='+c_id,
+       type: 'POST',
+       dataType: 'json',
+       contentType: 'application/json;charset=UTF-8',
+       data: {},
+       success: function(data){
+       var d = eval("("+data+")");
+       $("#c_id").val(d.c_id);
+       $("#c_name").val(d.c_name);
+       $("#c_telephone").val(d.c_telephone);
+       $("#c_address").val(d.c_address);
+       $("#c_remark").val(d.c_remark);
+       $("#editModal").modal('show');
+       },
+       error: function(){
+            alert("错误");
+       }
+  });
+  ```
+
+  详情参考这篇 [博文](http://www.cnblogs.com/myjavawork/archive/2011/03/10/1979279.html)
+
+**4.2 action层 --> 处理分页逻辑**
+
+```
+  /**
+     * 分页查询相关
+     */
+    //属性驱动方式，当前页，默认页1
+    private Integer pageCode = 1;
+    public void setPageCode(Integer pageCode) {
+        if(pageCode == null){
+            pageCode = 1;
+        }
+        this.pageCode = pageCode;
+    }
+
+    //默认每页显示的数据条数
+    private Integer pageSize = 4;
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    //分页查询的方法
+    public String findByPage(){
+        //调用service层
+        DetachedCriteria criteria = DetachedCriteria.forClass(Cutton.class);
+        //查询
+        PageBean<Cutton> page = cuttonService.findByPage(pageCode,pageSize,criteria);
+        //压栈
+        ValueStack vs = ActionContext.getContext().getValueStack();
+        //顶栈是map<"page",page对象>
+        vs.set("page",page);
+        return "page";
+    }
+```
+
+**4.3 dao层 --> 处理分页逻辑**
+
+```
+    /**
+     * 分页查询的方法
+     * @param pageCode
+     * @param pageSize
+     * @param criteria
+     * @return
+       */
+    @Override
+    public PageBean<Cutton> findByPage(Integer pageCode, Integer pageSize, DetachedCriteria 	criteria) {
+        PageBean<Cutton> page = new PageBean<Cutton>();
+        page.setPageCode(pageCode);
+        page.setPageSize(pageSize);
+
+        //先查询总记录数 select count(*)
+        criteria.setProjection(Projections.rowCount());
+        List<Number> list = (List<Number>) this.getHibernateTemplate().findByCriteria(criteria);
+        if(list != null && list.size() > 0){
+            int totalCount = list.get(0).intValue();
+            //总记录数
+            page.setTotalCount(totalCount);
+        }
+
+        //要吧select count(*) 先清空 变成select *...
+        criteria.setProjection(null);
+
+        //提供分页查询
+        List<Cutton> beanList = (List<Cutton>) this.getHibernateTemplate().findByCriteria(criteria,(pageCode - 1)*pageSize, pageSize);
+
+        //分页查询的数据，每页显示的数据，使用limit
+        page.setBeanList(beanList);
+        return page;
+    }
+```
+
+
+
+**5. 前台JS的分页逻辑**
 
 **分析**
 
-```
+```text
 百度分页算法（每页显示10个页码）：
 	当点击页码7之后的页码，最前端的页码依次减少
 		[0] [1] [2] [3] [4] [5] [6] [7] [8] [9] [10]
@@ -136,7 +446,7 @@ public class PageBean<T> implements Serializable {
 
 **前端代码**
 
-```
+```html
 <form class="listForm" name="listForm" method="post" action="<%=basePath%>/cutton_findByPage.action">
   <div class="row">
     <div class="form-inline">
@@ -228,76 +538,20 @@ public class PageBean<T> implements Serializable {
 </form>
 ```
 
-### 3. SSH框架后台进行的查询语句
 
-**Action层**
 
-```
-    /**
-     * 分页查询相关
-     */
-    //属性驱动方式，当前页，默认页1
-    private Integer pageCode = 1;
-    public void setPageCode(Integer pageCode) {
-        if(pageCode == null){
-            pageCode = 1;
-        }
-        this.pageCode = pageCode;
-    }
+**项目截图**
 
-    //默认每页显示的数据条数
-    private Integer pageSize = 4;
-    public void setPageSize(Integer pageSize) {
-        this.pageSize = pageSize;
-    }
+​	项目截图和上一篇博文采用相同的页面，博主这里就懒一下咯（嘿嘿
 
-    //分页查询的方法
-    public String findByPage(){
-        //调用service层
-        DetachedCriteria criteria = DetachedCriteria.forClass(Cutton.class);
-        //查询
-        PageBean<Cutton> page = customerService.findByPage(pageCode,pageSize,criteria);
-        //压栈
-        ValueStack vs = ActionContext.getContext().getValueStack();
-        //顶栈是map<"page",page对象>
-        vs.set("page",page);
-        return "page";
-    }
-```
+​	![](img/img-1.png)
 
-**Dao层**
+<br/>
 
-```
-    /**
-     * 分页查询的方法
-     * @param pageCode
-     * @param pageSize
-     * @param criteria
-     * @return
-     */
-    public PageBean<Cutton> findByPage(Integer pageCode, Integer pageSize, DetachedCriteria 	criteria) {
-        PageBean<Cutton> page = new PageBean<Cutton>();
-        page.setPageCode(pageCode);
-        page.setPageSize(pageSize);
+**联系**
 
-        //先查询总记录数 select count(*)
-        criteria.setProjection(Projections.rowCount());
-        List<Number> list = (List<Number>) this.getHibernateTemplate().findByCriteria(criteria);
-        if(list != null && list.size() > 0){
-            int totalCount = list.get(0).intValue();
-            //总记录数
-            page.setTotalCount(totalCount);
-        }
+If you have some questions after you see this article, you can contact me or you can find some info by clicking these links.
 
-        //要吧select count(*) 先清空 变成select *...
-        criteria.setProjection(null);
-
-        //提供分页查询
-        List<Cutton> beanList = (List<Cutton>) this.getHibernateTemplate().findByCriteria(criteria,(pageCode - 1)*pageSize, pageSize);
-
-        //分页查询的数据，每页显示的数据，使用limit
-        page.setBeanList(beanList);
-        return page;
-    }
-```
-
+- [Blog@TyCoding's blog](http://tycoding.cn)
+- [GitHub@TyCoding](https://github.com/TyCoding)
+- [ZhiHu@TyCoding](https://www.zhihu.com/people/tomo-83-82/activities)
