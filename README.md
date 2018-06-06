@@ -1,46 +1,43 @@
----
-title: SSH框架实现分页查询案例
-date: 2018-04-25
-tags: SSH
-comments: false
----
-
-<br/>
-
 **SSH框架整合、分页查询案例**
 
-之前已经写过了SSM框架的分页查询案例，刚翻笔记时看到了以前写过的SSH分页查询的功能的笔记，这里就也再整理一下喽，送给那些在学习SSH框架的同学，SSH框架因为用的Hibernate，所以与SSM有所不同，希望这个小案例能对大家有所帮助。
+Spring、Hibernate、Struts2框架虽然现在已经不是很流行，但是在一写公司的老项目中仍然在使用，多学一种技术总没有坏处，所以如果大家刚学完了Spring、Struts、Hibernate框架，那么这个项目将教会你如何对这三大框架进行整合。
 
 
+# 关于项目
 
-<!--more-->
-
-**关于项目**
+## 项目环境
 
 ```
 框架：
 	后端：spring + struts2 + hibernate5.x
 	前端：bootstrap + Fontawesome图标集
 环境：IDEA + maven + mysql5.7 + Tomcat8
-index：localhost:8080/SSH_Paging/
 ```
 
-本项目GitHub地址：[TyCoding-->SSH-Paging](https://github.com/TyCoding/SSH-Paging)
+## 项目功能
 
----
+```
+1. 用户登录
+2. 客户信息的增、删、改、查
+3. 客户信息的列表展示和分页查询功能
+```
 
-**我们先看一下项目目录结构**
+项目源码请点击[SSH框架整合](https://github.com/TyCoding/ssh) 进入我的GitHub。
+
+## 项目结构
 
 ![](img/directory.png)
 
-**1. 首先这是maven项目，我们要要入依赖**
+# jar依赖
 
-```
+因为本项目使用了maven，如果你对maven项目不了解，可以查看我这篇博文：[maven起步](http://tycoding.cn/2018/06/01/maven/)
+
+```xml
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com</groupId>
-  <artifactId>customer</artifactId>
+  <groupId>cn</groupId>
+  <artifactId>ssh</artifactId>
   <packaging>war</packaging>
   <version>1.0-SNAPSHOT</version>
   <name>customer Maven Webapp</name>
@@ -65,7 +62,6 @@ index：localhost:8080/SSH_Paging/
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
-
 
   <dependencies>
     <!-- 单元测试 -->
@@ -163,7 +159,7 @@ index：localhost:8080/SSH_Paging/
 </project>
 ```
 
-**2. 创建数据库**
+# 创建数据库
 
 注：由于使用hibernate，我们已配置表结构由hibernate自动生成，这里就不需要我们创建了
 
@@ -182,7 +178,7 @@ insert into Customer values(5,'小白','123456789','你猜','不想写备注');
 insert into Customer values(6,'菜鸡','123456789','你猜','不想写备注');
 ```
 
-**3. PageBean的封装**
+# PageBean的封装
 
 ```java
 package com.cutton.pojo;
@@ -265,9 +261,13 @@ public class PageBean<T> implements Serializable {
 }
 ```
 
-**4.1 action层 --> 处理前台模态框的编辑功能**
+# 后端代码编写
 
-```
+## 编辑功能
+
+处理前台模态框的编辑功能部分
+
+```java
 /**
      * 为模态框提供的查询功能
      * 处理ajax的请求
@@ -305,7 +305,7 @@ public class PageBean<T> implements Serializable {
 
 那么，在这里是怎样进行将这个JSON格式数据返回给页面呢？我们需要看一下struts2.xml中配置：
 
-```
+```xml
 <package name="struts2" namespace="/" extends="struts-default,json-default">
 <action name="customer_*" class="customerAction" method="{1}">
 	<result type="json">
@@ -314,15 +314,15 @@ public class PageBean<T> implements Serializable {
      <allowed-methods>search</allowed-methods>
 </action>
 </package>
-	
+
 ```
 
-1. 注意一下这个```<allowed-methods>```是为我们的通配符服务的，在struts2.3版本以后，如果我们没有写这个而直接使用通配符就会报错找不到映射，所以需要配置这个标签，格式：```<allowed-methods>方法名1，方法名2…</allowed-methods>```。详情请参考这篇 [博文](https://blog.csdn.net/qq_29663071/article/details/53009287)
+1. 注意一下这个`<allowed-methods>`是为我们的通配符服务的，在struts2.3版本以后，如果我们没有写这个而直接使用通配符就会报错找不到映射，所以需要配置这个标签，格式：`<allowed-methods>方法名1，方法名2…</allowed-methods>`。详情请参考这篇 [博文](https://blog.csdn.net/qq_29663071/article/details/53009287)
 
-2. 注意```<result type="json">```在struts2中是用来做Ajax请求的，所以根本没有跳转页面，写这个标签，会将你Action中的变量转换成JSON格式数据返回到页面，
-  那么```<param name="root">result</param>```就会将你要返回的数据result（JSON字符串）返回给页面，在页面使用```var d = eval("("+data+")");``` 的方式将JSON字符串解析成JSON格式数据，然后我们就能通过ognl表达式解析获取数据，然后给指定的编辑框中赋值数据了。Ajax部分:
+2. 注意`<result type="json">`在struts2中是用来做Ajax请求的，所以根本没有跳转页面，写这个标签，会将你Action中的变量转换成JSON格式数据返回到页面，
+  那么`<param name="root">result</param>`就会将你要返回的数据result（JSON字符串）返回给页面，在页面使用`var d = eval("("+data+")");` 的方式将JSON字符串解析成JSON格式数据，然后我们就能通过ognl表达式解析获取数据，然后给指定的编辑框中赋值数据了。Ajax部分:
 
-  ```
+  ```js
   // 先去查询数据
   $.ajax({
        url: '<%=basePath%>/customer_search.do?c_id='+c_id,
@@ -347,12 +347,14 @@ public class PageBean<T> implements Serializable {
 
   详情参考这篇 [博文](http://www.cnblogs.com/myjavawork/archive/2011/03/10/1979279.html)
 
-**4.2 action层 --> 处理分页逻辑**
+## 分页功能
 
-```
+处理分页逻辑功能部分
+
+```java
   /**
-     * 分页查询相关
-     */
+    * 分页查询相关
+    */
     //属性驱动方式，当前页，默认页1
     private Integer pageCode = 1;
     public void setPageCode(Integer pageCode) {
@@ -382,9 +384,11 @@ public class PageBean<T> implements Serializable {
     }
 ```
 
-**4.3 dao层 --> 处理分页逻辑**
+## dao
 
-```
+处理分页逻辑
+
+```java
     /**
      * 分页查询的方法
      * @param pageCode
@@ -419,11 +423,9 @@ public class PageBean<T> implements Serializable {
     }
 ```
 
+# 前台JS的分页逻辑
 
-
-**5. 前台JS的分页逻辑**
-
-**分析**
+## 分析
 
 ```text
 百度分页算法（每页显示10个页码）：
@@ -435,8 +437,8 @@ public class PageBean<T> implements Serializable {
 	若 总页数 <= 10		则begin=1			  end=总页数
 	若 总页数 > 10		则begin=当前页-5	  	end=当前页+4
 		头溢出: 若begin < 1		 则begin=1	   end=10
-		尾溢出: 若begin > 当前页  则brgin=end-9	 end=总页数	
-		
+		尾溢出: 若begin > 当前页  则brgin=end-9	 end=总页数
+
 我对词项目每页显示5个页码：
 	若 总页数 <= 5		则begin=1			  end=总页数
 	若 总页数 >  5		则begin=当前页-1	  	end=当前页+3
@@ -444,7 +446,7 @@ public class PageBean<T> implements Serializable {
 		尾溢出: 若begin > 当前页  则brgin=end-4	 end=总页数
 ```
 
-**前端代码**
+## 前端代码
 
 ```html
 <form class="listForm" name="listForm" method="post" action="<%=basePath%>/cutton_findByPage.action">
@@ -538,20 +540,22 @@ public class PageBean<T> implements Serializable {
 </form>
 ```
 
+# 项目截图
 
-
-**项目截图**
-
-​	项目截图和上一篇博文采用相同的页面，博主这里就懒一下咯（嘿嘿
-
-​	![](img/img-1.png)
+![](img/img-1.png)
 
 <br/>
 
-**联系**
+# 交流
+
+如果大家有兴趣，欢迎大家加入我的Java交流群：671017003 ，一起交流学习Java技术。博主目前一直在自学JAVA中，技术有限，如果可以，会尽力给大家提供一些帮助，或是一些学习方法，当然群里的大佬都会积极给新手答疑的。所以，别犹豫，快来加入我们吧！
+
+<br/>
+
+# 联系
 
 If you have some questions after you see this article, you can contact me or you can find some info by clicking these links.
 
-- [Blog@TyCoding's blog](http://tycoding.cn)
+- [Blog@TyCoding's blog](http://www.tycoding.cn)
 - [GitHub@TyCoding](https://github.com/TyCoding)
 - [ZhiHu@TyCoding](https://www.zhihu.com/people/tomo-83-82/activities)
